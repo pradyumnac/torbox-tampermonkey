@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Cleans up torbox.net torrentlisting page
+// @name         Cleans up torbox
 // @namespace    http://pradyumnacster.wordpress.com/
 // @version      0.1
 // @description  A new rearranged  torbox.net
@@ -8,79 +8,52 @@
 // @grant        none
 // ==/UserScript==
 
-
-function filterTags(name){
-   //separates tags from names
-   //return format  : {name:<filtered_text>,tags:[tags]}
+function rowClick(i){
+    //console.log(i);
     
-    var tags = [];
-    var year = /[1-90]{4}/;
-    var brackettags = /(\(|\[)[a-zA-Z1-90\s\-\+]+(\)|\])/g;
-    var langtags = ["English","Hindi"];
-    var formattags = ["1080p","pdvdrip","dvdrip","720p","480p","x264","hdrip","hdts","mp4","bluray","aac","dvdscrrip","avi","mp3","1cdrip","cdrip","xvid"];
-    
-    var tmatch = name.match(brackettags);
-    name = name.replace(brackettags,"");
-    
-    tags = tags.concat(tmatch);
-    
-    ///*
-    for (j in formattags){
-        var re = new RegExp(formattags[j],"gi");
-        if(name.match(re)){
-              tags.push(name.match(re)[0]);
-              name = name.replace(re,"");
-        }
-    };
-    //*/
-    
-    //console.log(tags)
-    
-    
-    var ret = {}
-    ret.name = name;
-    ret.tags = tags;
-    return ret;
-}
-
-function cleanTorrentRows(){
-    //get all torrent rows
-    $(".newRow").each(function(i){
-        var elm = $($(".newRow")[i]);
-        category = elm.find("td.category").attr("title")
-        name = elm.find("td.name a").text()
-        inpeering = elm.find("td.inpeering span").attr("title")
-        size = elm.find("td.size").text()
-        seeders = elm.find("td.seeders").text()
-        //action = $(i).find("td.action").text()
+    after = $("#afterdiv");
+    if(after.attr("elemid")==i){
+        //if already open just close it and return
+        after.remove();
+        $("#afterdivpic").remove();
+        return
+    }
+    else {
+        after.remove();
+        $("#afterdivpic").remove();
         
-        fl = filterTags(name);
-        console.log(name)
-        elm.find("td.name a").text(fl.name)
-    });
+        elem = $(".newRow#"+i);
+        name = elem.find("td.name a").text();
+        type = elem.find("td.category span").attr("title");
+
+        //console.log(name);
+        //console.log(type);
+
+        if(type=="Video"){
+            d  = getMovieDetails(name,"",elem,i);
+            console.log("Movie details logic invoked");
+
+        }
+        
+    }
 }
-
-$(document).ready(function() {
-    cont_width = $(".content").width();
-    $(".left_col").hide();
-    $(".right_col").hide();
-    $(".footer").hide();
-    $(".center_col").width(cont_width);
+function getMovieDetails(name,year,elem,i){
+    //http://www.omdbapi.com/?t=The+ugly+truth&y=2009&plot=full&r=json
+    //relies on open moview database api
+    en_name = encodeURI(name);
+    url = "http://www.omdbapi.com/?t="+en_name+"&y="+year+"&plot=full&r=json"
     
-    //$("#more").click();
-    $("table#results th:nth-child(1)").width("5%");
-    $("table#results th:nth-child(2)").width("60%");
-    $("table#results th:nth-child(3)").width("10%");
-    $("table#results th:nth-child(4)").width("10%");
-    $("table#results th:nth-child(5)").width("10%");
-    $("table#results th:nth-child(6)").width("5%");
-    
-    
-    setTimeout(cleanTorrentRows,2000); 
-    
-    
-});
-
-$("#more").click(function(e){
-   setTimeout(cleanTorrentRows,2000); 
-});
+    $.get(url,function(data){
+        console.log(data);
+        if(data.Response=="True"){
+            html ="<td colspan=3 id=\"afterdiv\" elemid="+i+"  > "+
+                "<p class=\"movie_name movie_elem\"><b>Name:</b>"+data.Title+"("+data.Year+")</p>"+ 
+                "<p class=\"release movie_elem\"><b>Released on:</b>"+data.Released+"("+data.Country+");</p><p class=\"genre movie_elem\"> <b >Genre:</b>"+data.Genre+"</p>"+
+                "<p class=\"cast movie_elem\"><b>Actors:</b>"+data.Actors+"; </p><p class=\"director movie_elem\"><b>Director:</b>"+data.Director+"</p><p class=\"writer movie_elem\"><b>Writer:</b>"+data.Writer+"</p>"+
+                "<p class=\"runtime movie_elem\"><b>Runtime:</b>"+data.Runtime+"</p>"+
+                "<p class=\"imdb_rating movie_elem\"><b>IMDB rating:</b>"+data.imdbRating+" based out of <b>"+data.imdbVotes+"</b> votes</p>"+
+                "<p class=\"Plot movie_elem\"><b>Plot:</b>"+data.Plot+"</p>"+
+                "<p class=\"image_link  movie_elem\"><b>Image Link:</b><a href=\""+data.Poster+"\" target=\"_blank\">Click here</a></p>"+
+                "</td>";
+            elem.attr("vname",data.Title);
+       
